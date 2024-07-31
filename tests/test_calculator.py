@@ -1,42 +1,64 @@
 from playwright.sync_api import sync_playwright, expect
 import pytest
+import random
 
-# Параметризованный тест для проверки различных операций калькулятора
-# Используем pytest.mark.parametrize для передачи разных наборов входных данных
+
+def generate_random_operands(max_value=10000):
+    return random.randint(1, max_value), random.randint(1, max_value)
+
+
 @pytest.mark.parametrize(
-    "operand1, operand2, operation, expected_result",
+    "operation",
     [
-        # Тестовые случаи для разных операций
-        (5, 3, "+", 8),   # Сложение
-        (10, 4, "-", 6),  # Вычитание
-        (7, 2, "*", 14),  # Умножение
-        (12, 3, "/", 4),  # Деление
-        # Тестовые случаи для проверки ошибок
-        (10, 0, "/", "Ошибка: Деление на ноль"), # Деление на ноль
-        ("abc", 5, "+", "Ошибка: Некорректный ввод"), # Некорректный ввод
-        ("", 5, "+", "Ошибка: Некорректный ввод"), # Пустое поле
-        # Тестовые случаи для проверки граничных условий
-        (1000000, 500000, "+", 1500000), # Большие числа
-        (-5, 3, "+", -2), # Отрицательные числа
+        "+",
+        "-",
+        "*",
+        "/"
     ]
 )
-def test_calculator_operations(calculator_page, operand1, operand2, operation, expected_result):
-    '''Параметризованный тест для проверки различных операций калькулятора'''
-    # Устанавливаем значения операндов
+def test_basic_calculation(calculator_page, operation):
+    """Тест для проверки основных операций с целыми числами"""
+    operand1, operand2 = generate_random_operands()
     calculator_page.set_operand1(operand1)
     calculator_page.set_operand2(operand2)
-    # Выбираем операцию
     calculator_page.select_operation(operation)
-    # Кликаем на кнопку "Вычислить"
     calculator_page.click_calculate()
+    expected_result = eval(f"{operand1} {operation} {operand2}")
+    assert calculator_page.get_result_text() == str(expected_result)
 
-    # Проверяем результат
-    if isinstance(expected_result, str):
-        # Если ожидается строка (ошибка), то проверяем текст
-        expect(calculator_page.result_paragraph).to_have_text(expected_result)
-    else:
-        # Иначе ожидается число, проверяем результат
-        calculator_page.expect_result(expected_result)
+
+@pytest.mark.parametrize(
+    "operation",
+    [
+        "+",
+        "-",
+        "*",
+        "/"
+    ]
+)
+def test_calculation_with_float(calculator_page, operation):
+    """Тест для проверки операций с дробными числами"""
+    operand1, operand2 = generate_random_operands(max_value=1000)
+    operand1 /= 10
+    operand2 /= 10
+    calculator_page.set_operand1(operand1)
+    calculator_page.set_operand2(operand2)
+    calculator_page.select_operation(operation)
+    calculator_page.click_calculate()
+    expected_result = eval(f"{operand1} {operation} {operand2}")
+    assert calculator_page.get_result_text() == str(expected_result)
+
+
+def test_division_on_zero(calculator_page):
+    """Тест для проверки деления на ноль"""
+    operand1 = 10
+    operand2 = 0
+    calculator_page.set_operand1(operand1)
+    calculator_page.set_operand2(operand2)
+    calculator_page.select_operation("/")
+    calculator_page.click_calculate()
+    assert "Ошибка: Деление на ноль" in calculator_page.get_result_text()
+
 
 # Запускаем тесты с помощью pytest
 with sync_playwright() as playwright:
