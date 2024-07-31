@@ -59,7 +59,6 @@ def test_division_on_zero(calculator_page):
     calculator_page.click_calculate()
     assert "Ошибка: Деление на ноль" in calculator_page.get_result_text()
 
-
 # Запускаем тесты с помощью pytest
 with sync_playwright() as playwright:
     pytest.main(["-v", "-s"])
